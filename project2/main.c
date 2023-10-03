@@ -12,11 +12,11 @@
 #define ARR_LEN 6
 
 // Print the array 
-void printArr(int cnt, int **arr) {
+void printArr(int cnt, unsigned int **arr) {
     char *headers[] = {"SKILL_BREAKDANCING", "SKILL_APICULTURE", "SKILL_BASKET", "SKILL_XBASKET", "SKILL_SWORD", "TOTAL_XP"};
     for (int i=0; i < ARR_LEN; i++) {
         printf("%s\n", headers[i]);
-        for (int j=0; j < cnt; j++) printf("%d\n", arr[i][j]);
+        for (int j=0; j < cnt; j++) printf("%u\n", arr[i][j]);
         printf("\n");
     }
 }
@@ -31,14 +31,14 @@ int checkArgs(int argc, char **argv) {
 
 // Compare function for qsort
 int compare(const void *a, const void *b) {
-    return (*(int *)a - *(int *)b);
+    return (*(unsigned int *)b - *(unsigned int *)a);
 }
 
 // Sorts all the arrays
-void standard(int cnt, int **arr) {
+void standard(int cnt, unsigned int **arr) {
     // Loop through array of arrays, and sort each one
     for (int i=0; i < ARR_LEN; i++) {
-        qsort(arr[i], cnt, sizeof(int), compare);
+        qsort(arr[i], cnt, sizeof(unsigned int), compare);
     }
 }
 
@@ -52,22 +52,21 @@ int main(int argc, char **argv) {
     }
 
     // Array of arrays
-    int **arr = malloc(ARR_LEN * sizeof(int *));
+    unsigned int **arr = malloc(ARR_LEN * sizeof(unsigned int *));
     int capacity = 1; // Start at 1, multiply by ten, should divide nicely
-    for (int i = 0; i < ARR_LEN; i++) arr[i] = malloc(capacity * sizeof(int)); // Initialize to size 1
+    for (int i = 0; i < ARR_LEN; i++) arr[i] = malloc(capacity * sizeof(unsigned int)); // Initialize to size 1
 
-    int tempArr[ARR_LEN];
-    int bd; int ac; int b; int xb; int s; // Temp values for storing input
+    unsigned int tempArr[ARR_LEN];
     int cnt = 0;
 
     // Loop through stdin
-    while (scanf("%d %d %d %d %d", &tempArr[0], &tempArr[1], &tempArr[2], &tempArr[3], &tempArr[4]) == 5) { // Loop until end
+    while (scanf("%u %u %u %u %u", &tempArr[0], &tempArr[1], &tempArr[2], &tempArr[3], &tempArr[4]) == 5) { // Loop until end
         // Check if we need to reallocate cuz we at the limit
 
         if (cnt == capacity) {
             // Increase the capacity by ten, should result in no over mallacing
             capacity *= 10;
-            for (int i = 0; i < ARR_LEN; i++) arr[i] = realloc(arr[i], capacity * sizeof(int)); // Initialize to size 1
+            for (int i = 0; i < ARR_LEN; i++) arr[i] = realloc(arr[i], capacity * sizeof(unsigned int)); // Initialize to size 1
         }
         for (int i=0; i < ARR_LEN - 1; i++) {
             arr[i][cnt] = tempArr[i];
