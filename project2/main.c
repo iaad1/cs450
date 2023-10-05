@@ -10,6 +10,7 @@
 #include <string.h>
 
 #define ARR_LEN 6
+#define COUNT_SORT_LEN 10000 // Most should be less than 10k elements according to the assignment
 
 // Print the array 
 void printArr(int cnt, unsigned int **arr) {
@@ -29,6 +30,105 @@ int checkArgs(int argc, char **argv) {
     return 1;
 }
 
+// CUSTOM SORTING STUFF STARTS HERE
+
+// Quick sort algo ripped off wikipedia https://en.wikipedia.org/wiki/Quicksort
+
+void swap(int* a, int* b) {
+    int temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+// Returns an index, comparisons are for a DESC sort.
+int partition(unsigned int *arr, int low, int high) {
+    // get the pivot first by choosing the middle value
+    int pindex = (high - low)/2 + low; // Pindexter
+    unsigned int pivot = arr[pindex];
+
+    // Get left and right index
+    int i = low - 1; // Left
+    int j = high + 1; // Right
+
+    // Loop forever
+    while(1) {
+        do i++; 
+        while(arr[i] > pivot);
+
+        do j--;
+        while(arr[j] < pivot);
+
+        if (i >= j) return j;
+
+        // Swap the left and right elements
+        swap(&arr[i], &arr[j]);
+    }
+
+}
+
+// My quick sort algo
+void quickSort(unsigned int *arr, int low, int high) {
+    if (low < high) {
+        int p = partition(arr, low, high);
+        quickSort(arr, low, p);
+        quickSort(arr, p + 1, high);
+    }
+}
+
+
+
+// Implements a count sort with quick sort on the side.
+void csort(unsigned *arr, int cnt) {
+    // Create a counting array, of size COUNT_SORT_LEN
+    unsigned int *carr = calloc(COUNT_SORT_LEN, sizeof(unsigned int)); // Set to zeros using calloc
+    // Create an array to quick sort, with values larger than 10k
+    unsigned int *qarr = malloc( cnt * sizeof(unsigned int));
+    
+
+    // Couple variables for tracking places in carr and qarr
+    int bad = 0; unsigned int val; // Bad is the number of numbers we've put into the quick sort array.
+    for (int i=0; i <= cnt; i++) {
+        val = arr[i]; // Current value
+        if (val >= COUNT_SORT_LEN) { // check for bad case, add to bad array and increment bad
+            // printf("bad: %d\n", bad);
+            qarr[bad] = val;
+            bad++;
+            continue;
+        }
+        // printf("good: %d\n", val);
+        // If we make it here, we are under 10k (IMPORTANT, actual count size is 9999, makes it simpler to handle 0s)
+        carr[val] += 1; // Increment the count at this index (value), because we have zeros, we shouldn't need to subtract or add 1s anywhere
+    }
+
+
+    // We now have a count sort array, and an unsorted array for quick sort to sort
+    // Sort the lame array with quicksort
+    quickSort(qarr, 0, bad - 1);
+    // Now that its quick sorted, put the two arrays back together, into the original array
+
+    int i; // We wanna track where we at in the array.
+    // First, since we are doing a descending sort, we start with the descending quick sort, and insert those into the array.
+    for (i = 0; i <= bad; i++) { // Bad is the index left off on, which should be len - 1, hence the <=
+        val = qarr[i];
+        arr[i] = val;
+    }
+
+    // Now, loop backwards through the count sort, because it is sorted ascending
+    for (int j = COUNT_SORT_LEN - 1; j >= 0; j--) { // Start at end, loop backwards
+        val = carr[j];
+        if (val == 0) continue; // Check if zero, if it is, skip.
+        // If not, loop through and add j, val number of times
+        for (int k=0; k < val; k++) {
+            arr[i] = j;
+            i++;
+        }
+    }
+
+
+}
+
+// CUSTOM SORTING ENDS HERE
+
 // Compare function for qsort
 int compare(const void *a, const void *b) {
     return (*(unsigned int *)b - *(unsigned int *)a);
@@ -42,6 +142,11 @@ void standard(int cnt, unsigned int **arr) {
     }
 }
 
+void custom(int cnt, unsigned int **arr) {
+    for (int i=0; i < ARR_LEN; i++) {
+        csort(arr[i], cnt);
+    }
+}
 
 int main(int argc, char **argv) {
     // Check for valid arguments, pretty simple checks for this
@@ -57,7 +162,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < ARR_LEN; i++) arr[i] = malloc(capacity * sizeof(unsigned int)); // Initialize to size 1
 
     unsigned int tempArr[ARR_LEN];
-    int cnt = 0;
+    int cnt = 1;
 
     // Loop through stdin
     while (scanf("%u %u %u %u %u", &tempArr[0], &tempArr[1], &tempArr[2], &tempArr[3], &tempArr[4]) == 5) { // Loop until end
@@ -75,8 +180,10 @@ int main(int argc, char **argv) {
         cnt++;
     }
 
+    // printf("Count: %d\n", cnt);
+
     if (strcmp(argv[1], "standard") == 0) standard(cnt, arr);
-    // if (strcmp(argv[1], "custom") == 0) custom(cnt, arr);
+    if (strcmp(argv[1], "custom") == 0) custom(cnt, arr);
 
     printArr(cnt, arr);
 }
