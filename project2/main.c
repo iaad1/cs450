@@ -3,13 +3,14 @@
 // Judah Tanninen
 // Description: Sorter for xp, two ways to sort, custom should be faster
 // Usage: ./a.exe <sort_method> - sort_method will be either "standard" or "custom"
+// Uses count sort and quick sort, count sort only happens on values under 10k
 
 // Includes
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define ARR_LEN 6
+#define ARR_LEN 6 // Number of columns in 2d array
 #define COUNT_SORT_LEN 10000 // Most should be less than 10k elements according to the assignment
 
 // Print the array 
@@ -68,16 +69,14 @@ int partition(unsigned int *arr, int low, int high) {
 
 }
 
-// My quick sort algo
+// Quick sort
 void quickSort(unsigned int *arr, int low, int high) {
-    if (low < high) {
+    if (low < high) { // If we need to sort, sort it
         int p = partition(arr, low, high);
         quickSort(arr, low, p);
         quickSort(arr, p + 1, high);
     }
 }
-
-
 
 // Implements a count sort with quick sort on the side.
 void csort(unsigned *arr, int cnt) {
@@ -97,7 +96,6 @@ void csort(unsigned *arr, int cnt) {
             bad++;
             continue;
         }
-        // printf("good: %d\n", val);
         // If we make it here, we are under 10k (IMPORTANT, actual count size is 9999, makes it simpler to handle 0s)
         carr[val] += 1; // Increment the count at this index (value), because we have zeros, we shouldn't need to subtract or add 1s anywhere
     }
@@ -109,9 +107,9 @@ void csort(unsigned *arr, int cnt) {
 
     int i; // We wanna track where we at in the array.
     // First, since we are doing a descending sort, we start with the descending quick sort, and insert those into the array.
-    for (i = 0; i < bad; i++) { // Bad is the index left off on, which should be len - 1, hence the <=
+    for (i = 0; i < bad; i++) { // Bad is the index left off on, which should be length
         val = qarr[i];
-        arr[i] = val;
+        arr[i] = val; // Insert the sorted value into the original array
     }
 
     // Now, loop backwards through the count sort, because it is sorted ascending
@@ -120,12 +118,11 @@ void csort(unsigned *arr, int cnt) {
         if (val == 0) continue; // Check if zero, if it is, skip.
         // If not, loop through and add j, val number of times
         for (int k=0; k < val; k++) {
-            arr[i] = j;
+            arr[i] = j; // Insert the values of the count array into the array
             i++;
         }
     }
-
-
+    // We are now sorted baby.
 }
 
 // CUSTOM SORTING ENDS HERE
@@ -143,12 +140,14 @@ void standard(int cnt, unsigned int **arr) {
     }
 }
 
+// custom version of standard, uses csort instead of qsort
 void custom(int cnt, unsigned int **arr) {
     for (int i=0; i < ARR_LEN; i++) {
         csort(arr[i], cnt);
     }
 }
 
+// Main, checks args, gets input into a 2d arr, and sorts via the requested method.
 int main(int argc, char **argv) {
     // Check for valid arguments, pretty simple checks for this
     if (checkArgs(argc, argv) == 0) {
@@ -165,19 +164,20 @@ int main(int argc, char **argv) {
     unsigned int tempArr[ARR_LEN];
     int cnt = 0;
 
-    // Loop through stdin
+    // Loop through stdin, reading each line in the file.
     while (scanf("%u %u %u %u %u", &tempArr[0], &tempArr[1], &tempArr[2], &tempArr[3], &tempArr[4]) == 5) { // Loop until end
         // Check if we need to reallocate cuz we at the limit
 
+        // If count is at cap, we grow the array by 10x.
         if (cnt == capacity) {
-            // Increase the capacity by ten, should result in no over mallacing
+            // Increase the capacity by ten, should result in not using more memory than required.
             capacity *= 10;
             for (int i = 0; i < ARR_LEN; i++) arr[i] = realloc(arr[i], capacity * sizeof(unsigned int)); // Initialize to size 1
         }
         arr[ARR_LEN - 1][cnt] = 0; // Initialize the total to zero, so we can sum properly.
-        for (int i=0; i < ARR_LEN - 1; i++) {
+        for (int i=0; i < ARR_LEN - 1; i++) { // Add the values to the 2d array.
             arr[i][cnt] = tempArr[i];
-            arr[ARR_LEN - 1][cnt] += tempArr[i];
+            arr[ARR_LEN - 1][cnt] += tempArr[i]; // Add them all to the totals.
         }
         cnt++;
     }
