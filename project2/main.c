@@ -32,10 +32,12 @@ int checkArgs(int argc, char **argv) {
 
 // CUSTOM SORTING STUFF STARTS HERE
 
-// Quick sort algo ripped off wikipedia https://en.wikipedia.org/wiki/Quicksort
+// Quick sort algorithm ripped off wikipedia https://en.wikipedia.org/wiki/Quicksort
+// Same as in the slides
 
-void swap(int* a, int* b) {
-    int temp = *a;
+// Swap two pointers.
+void swap(unsigned int* a, unsigned int* b) {
+    unsigned int temp = *a;
     *a = *b;
     *b = temp;
 }
@@ -87,7 +89,7 @@ void csort(unsigned *arr, int cnt) {
 
     // Couple variables for tracking places in carr and qarr
     int bad = 0; unsigned int val; // Bad is the number of numbers we've put into the quick sort array.
-    for (int i=0; i <= cnt; i++) {
+    for (int i=0; i < cnt; i++) {
         val = arr[i]; // Current value
         if (val >= COUNT_SORT_LEN) { // check for bad case, add to bad array and increment bad
             // printf("bad: %d\n", bad);
@@ -100,7 +102,6 @@ void csort(unsigned *arr, int cnt) {
         carr[val] += 1; // Increment the count at this index (value), because we have zeros, we shouldn't need to subtract or add 1s anywhere
     }
 
-
     // We now have a count sort array, and an unsorted array for quick sort to sort
     // Sort the lame array with quicksort
     quickSort(qarr, 0, bad - 1);
@@ -108,7 +109,7 @@ void csort(unsigned *arr, int cnt) {
 
     int i; // We wanna track where we at in the array.
     // First, since we are doing a descending sort, we start with the descending quick sort, and insert those into the array.
-    for (i = 0; i <= bad; i++) { // Bad is the index left off on, which should be len - 1, hence the <=
+    for (i = 0; i < bad; i++) { // Bad is the index left off on, which should be len - 1, hence the <=
         val = qarr[i];
         arr[i] = val;
     }
@@ -162,7 +163,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < ARR_LEN; i++) arr[i] = malloc(capacity * sizeof(unsigned int)); // Initialize to size 1
 
     unsigned int tempArr[ARR_LEN];
-    int cnt = 1;
+    int cnt = 0;
 
     // Loop through stdin
     while (scanf("%u %u %u %u %u", &tempArr[0], &tempArr[1], &tempArr[2], &tempArr[3], &tempArr[4]) == 5) { // Loop until end
@@ -173,14 +174,13 @@ int main(int argc, char **argv) {
             capacity *= 10;
             for (int i = 0; i < ARR_LEN; i++) arr[i] = realloc(arr[i], capacity * sizeof(unsigned int)); // Initialize to size 1
         }
+        arr[ARR_LEN - 1][cnt] = 0; // Initialize the total to zero, so we can sum properly.
         for (int i=0; i < ARR_LEN - 1; i++) {
             arr[i][cnt] = tempArr[i];
             arr[ARR_LEN - 1][cnt] += tempArr[i];
         }
         cnt++;
     }
-
-    // printf("Count: %d\n", cnt);
 
     if (strcmp(argv[1], "standard") == 0) standard(cnt, arr);
     if (strcmp(argv[1], "custom") == 0) custom(cnt, arr);
