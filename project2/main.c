@@ -83,7 +83,7 @@ void csort(unsigned *arr, int cnt) {
     // Create a counting array, of size COUNT_SORT_LEN
     unsigned int *carr = calloc(COUNT_SORT_LEN, sizeof(unsigned int)); // Set to zeros using calloc
     // Create an array to quick sort, with values larger than 10k
-    unsigned int *qarr = malloc( cnt * sizeof(unsigned int));
+    unsigned int *qarr = malloc( cnt * sizeof(unsigned int)); // Extremely large array, could do this dynamically, but it's already fast enough
     
 
     // Couple variables for tracking places in carr and qarr
