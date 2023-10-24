@@ -35,10 +35,12 @@ Node rotateRight(Node);
 Node rotateLeft(Node);
 Node avlInsert(Node, char *, int, int);
 Node avl(FILE *);
+Node treeSearch(Node, char[16]);
 
 // LAME AH array function
 int *append(int *, int *, int ); // Stupid annoying banned from server twice shit
 // Why grant, why??
+
 int max(int, int);
 
 // Main program
@@ -63,13 +65,27 @@ int main(int argc, char **argv) {
         // root = scapegoat(fp);
     }
     fclose(fp); // Close the file, dont need. (maybe get rid of this for speed?)
+    // printf("key: %s, cnt: %d, timestamp: %d\n", root->key, root->cnt, root->timestamp);
+
+    char in[16];
+    // Tree should now be created, take stdin in and find the matching node.
+    while(scanf("%s", in) == 1) {
+        // Make a search
+        Node res = treeSearch(root, in);
+        if (res == NULL) {
+            printf("%s is not currently banned from any servers\n");
+            continue;
+        }
+        // Found it, print the relevant information
+        printf("%s was banned from %d servers. most recently on: %d\n", res->key, res->cnt, res->timestamp);
+    }
 
 
 
 
     t = clock() - t;
-    double time_taken = (((double)t)/CLOCKS_PER_SEC) * 1000000; // Microseconds
-    printf("total time in microseconds: %f\n", time_taken); 
+    int time_taken = (((double)t)/CLOCKS_PER_SEC) * 1000000; // Microseconds
+    printf("total time in microseconds: %d\n", time_taken); 
 }
 
 
@@ -99,30 +115,30 @@ Node avl(FILE *fp) {
         sscanf(line, "%s %d %d", name, &serverId, &timestamp); // Pull the data.
         root = avlInsert(root, name, serverId, timestamp);
     }
-    printf("key: %s, cnt: %d, timestamp: %d\n", root->key, root->cnt, root->timestamp);
     return root; // Return the root.
 }
 
 // Insert function, does a lot of stuff, including rotating
-Node avlInsert(Node root, char *username, int sid, int timestamp) {
+Node avlInsert(Node root, char *key, int sid, int timestamp) {
     // if root is null, create a new node and return it
     if (root == NULL) {
         Node new = malloc(sizeof(struct node)); // New node
         new->left = new->right = NULL; // Set legs to null
-        strcpy(new->key, username);
+        strcpy(new->key, key);
         new->cnt = 1;
         new->sids = malloc(1 * sizeof(int));
         new->sids[0] = sid;
         new->timestamp = timestamp;
+        new->height = 1; // Default height to 1.
         return new;
     }
 
     // Comparison
-    int cmp = strcmp(username, root->key);
+    int cmp = strcmp(key, root->key);
     if (cmp < 0) { // 
-         root->left = avlInsert(root->left, username, sid, timestamp);
+         root->left = avlInsert(root->left, key, sid, timestamp);
     } else if (cmp > 0) {
-        root->right = avlInsert(root->right, username, sid, timestamp);
+        root->right = avlInsert(root->right, key, sid, timestamp);
     } else {
         root->sids = append(root->sids, &(root->cnt), sid); // Update the server ids
         if (timestamp > root->timestamp) root->timestamp = timestamp; // Update the latest timestamp
@@ -138,20 +154,17 @@ Node avlInsert(Node root, char *username, int sid, int timestamp) {
 
     // First, left heavy, if balance is greater than 1
     if (bal > 1) {
-        cmp = strcmp(username, root->left->key);
-        if (cmp > 0) return rotateRight(root); // If username less than the roots left key
+        cmp = strcmp(key, root->left->key);
+        if (cmp < 0) return rotateRight(root); // If key less than the roots left key
         // Else, double rotate
         root->left = rotateLeft(root->left);
-        printf("doingthis2\n");
         return rotateRight(root); // Could simplify this a bit
     }
     // Second, right heavy, balance left than -1
     if (bal < -1) {
-        printf("%p\n", root->right);
-        cmp = strcmp(username, root->right->key);
-        if (cmp <= 0) return rotateLeft(root); // If username greater than the roots right key
+        cmp = strcmp(key, root->right->key);
+        if (cmp > 0) return rotateLeft(root); // If key greater than the roots right key
         // Else, double rotate
-        printf("doingthis\n");
         root->right = rotateRight(root->right);
         return rotateLeft(root);
     }
@@ -160,44 +173,51 @@ Node avlInsert(Node root, char *username, int sid, int timestamp) {
 }
 
 // Rotate left
-Node rotateLeft(Node c) {
-    // get the nodes we need
-    printf("testleft\n");
-    Node b = c->right;
-    Node a = b->right;
+Node rotateLeft(Node x) {
+    Node y = x->right;
+    Node T2 = y->left;
 
-    // rotate
-    b->left = c;
-    c->right = NULL;
+    // Perform the rotation
+    y->left = x;
+    x->right = T2;
 
-    // Update the height of the roots;
-    printf("%p\n", c->right);
-    a->height = 1 + max(nodeHeight(a->left), nodeHeight(a->right));
-    b->height = 1 + max(nodeHeight(b->left), nodeHeight(b->right));
-    c->height = 1 + max(nodeHeight(c->left), nodeHeight(c->right));
+    // Update heights
+    x->height = 1 + max(nodeHeight(x->left), nodeHeight(x->right));
+    y->height = 1 + max(nodeHeight(y->left), nodeHeight(y->right));
 
-    return b; // Return the new root;
+    return y; // New root after rotation
 }
 
 // Rotate right
-Node rotateRight(Node c) {
-    printf("testright\n");
-    // get the nodes we need
-    Node b = c->left;
-    Node a = b->left;
+Node rotateRight(Node y) {
+    Node x = y->left;
+    Node T2 = x->right;
 
-    // rotate
-    b->right = c;
-    c->left = NULL;
+    // Perform the rotation
+    x->right = y;
+    y->left = T2;
 
-    // Update the height of the roots;
-    a->height = 1 + max(nodeHeight(a->right), nodeHeight(a->left));
-    b->height = 1 + max(nodeHeight(b->right), nodeHeight(b->left));
-    c->height = 1 + max(nodeHeight(c->right), nodeHeight(c->left));
+    // Update heights
+    y->height = 1 + max(nodeHeight(y->left), nodeHeight(y->right));
+    x->height = 1 + max(nodeHeight(x->left), nodeHeight(x->right));
 
-    return b; // Return the new root;
+    return x; // New root after rotation
 }
 
+// Recursive tree search function that gets the node matching the given key.
+// If not found, NULL is returned
+Node treeSearch(Node root, char key[16]) { // Key will always be around 16 chars
+    if (root == NULL) return NULL;
+    int cmp = strcmp(key, root->key); // compare the two strings
+    if (cmp > 0) { // Key is greater than root->key, go right
+        return treeSearch(root->right, key);
+    }
+    if (cmp < 0) { // Key is less that root->key, go left
+        return treeSearch(root->left, key);
+    }
+    // Keys match, return root.
+    return root;
+}
 
 
 // Stupid lame append to array function, won't do anything if server id is in array already.
@@ -223,11 +243,7 @@ int max(int a, int b) {
 
 int nodeHeight(Node root) {
     if (root == NULL) return 0;
-    int left, right;
-    left = nodeHeight(root->left);
-    right = nodeHeight(root->right);
-    if (left > right) return 1+left;
-    return 1+right;
+    return root->height;
 }
 
 // Returns the balance of the tree, left - right
