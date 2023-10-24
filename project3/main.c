@@ -46,7 +46,7 @@ Node avl(FILE *);
 
 // Scapegoat tree declarations
 Node scapegoat(FILE *);
-Node scapeInsert(Node);
+Node scapeInsert(Node, char *, int, int);
 Node scapeFlatten(Node); // Returns 
 
 // Main program
@@ -99,6 +99,26 @@ bool validArgs(int argc, char **argv) {
     // Check that arg 1 is either "scapegoat" or "avl"
     if (strcmp(argv[1], "scapegoat") != 0 && strcmp(argv[1], "avl") != 0) return false;
     return true;
+}
+
+///////////////////////
+// SCAPEGOAT FUNCTIONS
+///////////////////////
+
+// Takes a file to griefers, and adds them all to a scapegoat tree. Then, returns the root.
+Node scapegoat(FILE *fp) {
+    Node root = NULL; // Create a node root
+    char line[32]; // Assume a max line length of 32, should handle it fine
+    char name[16];
+    int serverId;
+    int timestamp;
+
+    // Loop through each line, inserting as we go
+    while(fgets(line, 33, fp) != NULL) {
+        sscanf(line, "%s %d %d", name, &serverId, &timestamp); // Pull the data.
+        root = scapeInsert(root, name, serverId, timestamp);
+    }
+    return root; // Return the root.
 }
 
 
