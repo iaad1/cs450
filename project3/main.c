@@ -27,21 +27,27 @@ struct node { // Node should work with both avl and scapegoat, for ease of use
 };
 typedef struct node *Node; // So we don't have to use "struct node *" all the time.
 
-// Function declarations
+// Helper function declarations
+
 bool validArgs(int, char **);
+// LAME AH array function
+int *append(int *, int *, int ); // Stupid annoying banned from server twice shit
+// Why grant, why??
+int max(int, int);
+Node treeSearch(Node, char[16]);
+
+// AVL tree declarations
 int nodeHeight(Node);
 int nodeBalance(Node);
 Node rotateRight(Node);
 Node rotateLeft(Node);
 Node avlInsert(Node, char *, int, int);
 Node avl(FILE *);
-Node treeSearch(Node, char[16]);
 
-// LAME AH array function
-int *append(int *, int *, int ); // Stupid annoying banned from server twice shit
-// Why grant, why??
-
-int max(int, int);
+// Scapegoat tree declarations
+Node scapegoat(FILE *);
+Node scapeInsert(Node);
+Node scapeFlatten(Node); // Returns 
 
 // Main program
 int main(int argc, char **argv) {
@@ -62,7 +68,7 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "avl") == 0) {
         root = avl(fp);
     } else if (strcmp(argv[1], "scapegoat")) {
-        // root = scapegoat(fp);
+        root = scapegoat(fp);
     }
     fclose(fp); // Close the file, dont need. (maybe get rid of this for speed?)
     // printf("key: %s, cnt: %d, timestamp: %d\n", root->key, root->cnt, root->timestamp);
@@ -80,9 +86,7 @@ int main(int argc, char **argv) {
         printf("%s was banned from %d servers. most recently on: %d\n", res->key, res->cnt, res->timestamp);
     }
 
-
-
-
+    // Done with all the shtuff, finish the clock stuff.
     t = clock() - t;
     int time_taken = (((double)t)/CLOCKS_PER_SEC) * 1000000; // Microseconds
     printf("total time in microseconds: %d\n", time_taken); 
@@ -158,7 +162,7 @@ Node avlInsert(Node root, char *key, int sid, int timestamp) {
         if (cmp < 0) return rotateRight(root); // If key less than the roots left key
         // Else, double rotate
         root->left = rotateLeft(root->left);
-        return rotateRight(root); // Could simplify this a bit
+        return rotateRight(root); // Could simplify this a bit, but its not worth it for my brain.
     }
     // Second, right heavy, balance left than -1
     if (bal < -1) {
@@ -174,50 +178,54 @@ Node avlInsert(Node root, char *key, int sid, int timestamp) {
 
 // Rotate left
 Node rotateLeft(Node x) {
-    Node y = x->right;
-    Node T2 = y->left;
+    Node y = x->right; // the right node
+    Node z = y->left; // the left of that node
 
-    // Perform the rotation
-    y->left = x;
-    x->right = T2;
+    y->left = x; // Do the rotates
+    x->right = z;
 
-    // Update heights
+    // Update the new heights of the moved nodes.
     x->height = 1 + max(nodeHeight(x->left), nodeHeight(x->right));
     y->height = 1 + max(nodeHeight(y->left), nodeHeight(y->right));
 
-    return y; // New root after rotation
+    return y; // The new root returned
 }
 
-// Rotate right
+// Rotate right, same as left, but swapped.
 Node rotateRight(Node y) {
     Node x = y->left;
-    Node T2 = x->right;
+    Node z = x->right;
 
-    // Perform the rotation
     x->right = y;
-    y->left = T2;
+    y->left = z;
 
-    // Update heights
     y->height = 1 + max(nodeHeight(y->left), nodeHeight(y->right));
     x->height = 1 + max(nodeHeight(x->left), nodeHeight(x->right));
 
-    return x; // New root after rotation
+    return x;
 }
 
-// Recursive tree search function that gets the node matching the given key.
-// If not found, NULL is returned
-Node treeSearch(Node root, char key[16]) { // Key will always be around 16 chars
-    if (root == NULL) return NULL;
-    int cmp = strcmp(key, root->key); // compare the two strings
-    if (cmp > 0) { // Key is greater than root->key, go right
-        return treeSearch(root->right, key);
-    }
-    if (cmp < 0) { // Key is less that root->key, go left
-        return treeSearch(root->left, key);
-    }
-    // Keys match, return root.
-    return root;
+int nodeHeight(Node root) {
+    if (root == NULL) return 0;
+    return root->height;
 }
+
+// Returns the balance of the tree, left - right
+int nodeBalance(Node root) {
+    if (root == NULL) return 0; // Base case if root is nothing. shouldn't happen?
+
+    int lh = (root->left != NULL) ? root->left->height : 0;
+    int rh = (root->right != NULL) ? root->right->height : 0;
+
+    // Return the balance
+    return lh - rh;
+}
+
+////////////////////
+// HELPER FUNCTIONS
+////////////////////
+
+// Functions related to the trees, but not directly related to avl trees.
 
 
 // Stupid lame append to array function, won't do anything if server id is in array already.
@@ -241,18 +249,17 @@ int max(int a, int b) {
     return a > b ? a : b;
 }
 
-int nodeHeight(Node root) {
-    if (root == NULL) return 0;
-    return root->height;
-}
-
-// Returns the balance of the tree, left - right
-int nodeBalance(Node root) {
-    if (root == NULL) return 0; // Base case if root is nothing. shouldn't happen?
-
-    int lh = (root->left != NULL) ? root->left->height : 0;
-    int rh = (root->right != NULL) ? root->right->height : 0;
-
-    // Return the balance
-    return lh - rh;
+// Recursive tree search function that gets the node matching the given key.
+// If not found, NULL is returned
+Node treeSearch(Node root, char key[16]) { // Key will always be around 16 chars
+    if (root == NULL) return NULL;
+    int cmp = strcmp(key, root->key); // compare the two strings
+    if (cmp > 0) { // Key is greater than root->key, go right
+        return treeSearch(root->right, key);
+    }
+    if (cmp < 0) { // Key is less that root->key, go left
+        return treeSearch(root->left, key);
+    }
+    // Keys match, return root.
+    return root;
 }
