@@ -15,7 +15,7 @@
 #include <time.h>
 
 // Defines
-#define ALPHA 0.5
+#define ALPHA 0.7
 
 // Struct definitions
 struct node { // Node should work with both avl and scapegoat, for ease of use
