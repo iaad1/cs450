@@ -14,6 +14,9 @@
 #include <stdbool.h>
 #include <time.h>
 
+// Defines
+#define ALPHA 0.5
+
 // Struct definitions
 struct node { // Node should work with both avl and scapegoat, for ease of use
     char key[16]; // Should be 16 digits
@@ -21,6 +24,7 @@ struct node { // Node should work with both avl and scapegoat, for ease of use
     int *sids; // Stupid lame array of server ids
     int timestamp; // Holds the most recent ban timestamp
     int height; // Only for avl
+    int size; // For scapegoat.
     struct node *left;
     struct node *right;
     struct node *parent; // Only for scapegoat.
@@ -35,6 +39,7 @@ int *append(int *, int *, int ); // Stupid annoying banned from server twice shi
 // Why grant, why??
 int max(int, int);
 Node treeSearch(Node, char[16]);
+Node *appendNode(Node *, int, Node);
 
 // AVL tree declarations
 int nodeHeight(Node);
@@ -45,9 +50,13 @@ Node avlInsert(Node, char *, int, int);
 Node avl(FILE *);
 
 // Scapegoat tree declarations
+int nodeSize(Node);
 Node scapegoat(FILE *);
-Node scapeInsert(Node, char *, int, int);
-Node scapeFlatten(Node); // Returns 
+Node scapeInsert(Node, Node *, char *, int, int, int *, int);
+Node rebuild(Node);
+void ioTraverse(Node, Node *, int *);
+Node buildFromArr(Node *, int, int);
+
 
 // Main program
 int main(int argc, char **argv) {
@@ -67,7 +76,7 @@ int main(int argc, char **argv) {
     // Check if we are doing avl or scapegoat
     if (strcmp(argv[1], "avl") == 0) {
         root = avl(fp);
-    } else if (strcmp(argv[1], "scapegoat")) {
+    } else if (strcmp(argv[1], "scapegoat") == 0) {
         root = scapegoat(fp);
     }
     fclose(fp); // Close the file, dont need. (maybe get rid of this for speed?)
@@ -79,7 +88,7 @@ int main(int argc, char **argv) {
         // Make a search
         Node res = treeSearch(root, in);
         if (res == NULL) {
-            printf("%s is not currently banned from any servers\n");
+            printf("%s is not currently banned from any servers\n", in);
             continue;
         }
         // Found it, print the relevant information
@@ -107,18 +116,99 @@ bool validArgs(int argc, char **argv) {
 
 // Takes a file to griefers, and adds them all to a scapegoat tree. Then, returns the root.
 Node scapegoat(FILE *fp) {
-    Node root = NULL; // Create a node root
+    Node root = NULL; // Create a node root pointer
+    Node bad = NULL; // Create a pointer that we can check for when we encounter a bad insert.
     char line[32]; // Assume a max line length of 32, should handle it fine
     char name[16];
     int serverId;
     int timestamp;
-
+    int nodes = 0;
     // Loop through each line, inserting as we go
     while(fgets(line, 33, fp) != NULL) {
         sscanf(line, "%s %d %d", name, &serverId, &timestamp); // Pull the data.
-        root = scapeInsert(root, name, serverId, timestamp);
+        root = scapeInsert(root, &bad, name, serverId, timestamp, &nodes, 0);
+        if (bad != NULL) root = rebuild(bad);
+        bad = NULL;
     }
     return root; // Return the root.
+}
+
+Node scapeInsert(Node root, Node *bad, char key[16], int sid, int timestamp, int *nodes, int depth) {
+    int ncnt = (*nodes); // Number of nodes inserted so far.
+    int allowed = ncnt > 0 ? (log(ncnt)/log(1/ALPHA)) + 1 : 1; // Number that we can insert down to before requiring a rebalance.
+    // printf("nodes: %d, depth: %d, allowed: %d\n", ncnt, depth, allowed);
+    // if root is null, create a new node and return it
+    if (root == NULL) {
+        root = malloc(sizeof(struct node)); // New node
+        root->left = root->right = NULL; // Set legs to null
+        strcpy(root->key, key);
+        root->cnt = 1;
+        root->sids = malloc(1 * sizeof(int));
+        root->sids[0] = sid;
+        root->timestamp = timestamp;
+        root->parent = NULL;
+        root->size = 0; // Default size to 0, will get incremented a little later
+        (*nodes) += 1;
+    }
+
+    if (depth > allowed) {
+        (*bad) = root; // Assign the bad node. We will trigger a rebuild from here.
+    }
+    // Comparison
+    int cmp = strcmp(key, root->key);
+    if (cmp < 0) {
+         root->left = scapeInsert(root->left, bad, key, sid, timestamp, nodes, depth + 1);
+         root->left->parent = root; // Set the parent
+    } else if (cmp > 0) {
+        root->right = scapeInsert(root->right, bad, key, sid, timestamp, nodes, depth + 1);
+        root->right->parent = root; // Set the parent
+    } else {
+        root->sids = append(root->sids, &(root->cnt), sid); // Update the server ids
+        if (timestamp > root->timestamp) root->timestamp = timestamp; // Update the latest timestamp
+    }
+
+    // Update the size of the root.
+    root->size = 1 + nodeSize(root->left) + nodeSize(root->right);
+    return root;
+}
+
+
+// Function for rebalancing the tree, returns the root of the tree.
+Node rebuild(Node bad) {
+    // Begin traversing up the list until we find the highest node that is bad
+    Node root = bad;
+
+    // Get the root
+    while(root->parent != NULL) {
+        root = root->parent;
+    }
+
+    // Create an array of the length of the size of node
+    int len = root->size; int index = 0;
+    Node *arr = malloc(len * sizeof(Node));
+    ioTraverse(root, arr, &index);
+    // Arr should now be an array in order.
+    Node new = buildFromArr(arr, 0, len - 1);
+    new->parent = NULL;
+    return new;
+}
+
+// Build subtree from given array, which should be in order
+Node buildFromArr(Node *arr, int low, int high) {
+    if (low > high) return NULL; // Base case
+    int middle = (low + high) / 2;// Find the middle point.
+    Node root = arr[middle];
+    root->left = buildFromArr(arr, low, middle - 1);
+    root->right = buildFromArr(arr, middle + 1, high);
+    root->size = 1 + nodeSize(root->left) + nodeSize(root->right);
+    return root;
+}
+
+void ioTraverse(Node root, Node *arr, int *index) {
+    if (root == NULL) return;
+    ioTraverse(root->left, arr, index);
+    arr[(*index)++] = root;
+    ioTraverse(root->right, arr, index);
 }
 
 
@@ -230,6 +320,11 @@ int nodeHeight(Node root) {
     return root->height;
 }
 
+int nodeSize(Node root) {
+    if (root == NULL) return 0;
+    return root->size;
+}
+
 // Returns the balance of the tree, left - right
 int nodeBalance(Node root) {
     if (root == NULL) return 0; // Base case if root is nothing. shouldn't happen?
@@ -261,6 +356,13 @@ int *append(int *arr, int *size, int el) {
     newArr[len] = el;
     // Increment the size pointer
     (*size) += 1;
+    return newArr;
+}
+
+// Doesn't increment for you.
+Node *appendNode(Node *arr, int len, Node el) {
+    Node *newArr = realloc(arr, (len + 1) * sizeof(struct node));
+    newArr[len] = el;
     return newArr;
 }
 
