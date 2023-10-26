@@ -39,7 +39,6 @@ int *append(int *, int *, int ); // Stupid annoying banned from server twice shi
 // Why grant, why??
 int max(int, int);
 Node treeSearch(Node, char[16]);
-Node *appendNode(Node *, int, Node);
 
 // AVL tree declarations
 int nodeHeight(Node);
@@ -356,13 +355,6 @@ int *append(int *arr, int *size, int el) {
     newArr[len] = el;
     // Increment the size pointer
     (*size) += 1;
-    return newArr;
-}
-
-// Doesn't increment for you.
-Node *appendNode(Node *arr, int len, Node el) {
-    Node *newArr = realloc(arr, (len + 1) * sizeof(struct node));
-    newArr[len] = el;
     return newArr;
 }
 
